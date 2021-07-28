@@ -726,7 +726,12 @@ def get_official_eval_result(gt_annos,
     overlap_easy = np.array([[0.7, 0.5, 0.5, 0.7, 0.5, 0.5, 0.5, 0.5],
                             [0.5, 0.25, 0.25, 0.5, 0.25, 0.5, 0.5, 0.5],
                             [0.5, 0.25, 0.25, 0.5, 0.25, 0.5, 0.5, 0.5]])
-    min_overlaps = np.stack([overlap_mod, overlap_easy], axis=0)  # [2, 3, 5]
+    min_overlaps = np.stack([overlap_mod, overlap_easy], axis=0)
+    # explanation:
+    # 0. overlap_th (kitti_official=.75/.5/.5, their own easy),
+    # 1. metric (bb, bev, 3d),
+    # 2. classes (car, ped, cyc, ...)
+
     class_to_name = {
         0: 'Car',
         1: 'Pedestrian',
