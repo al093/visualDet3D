@@ -28,7 +28,7 @@ class CostVolumePyramid(nn.Module):
             #nn.ReLU(),
             BasicBlock(3 * input_features, 3 * input_features),
         )
-        input_features = 3 * input_features + depth_channel_8 # 3 * 24 + 24 = 96
+        input_features = 3 * input_features + depth_channel_8  # 3 * 24 + 24 = 96
         self.eight_to_sixteen = nn.Sequential(
             ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
             nn.AvgPool2d(2),
@@ -45,18 +45,18 @@ class CostVolumePyramid(nn.Module):
             #nn.BatchNorm2d(3 * input_features),
             #nn.ReLU(),
         )
-        self.output_channel_num = 3 * input_features #1152
+        self.output_channel_num = 3 * input_features  # 1152
 
         self.depth_output = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            nn.Conv2d(self.output_channel_num, int(self.output_channel_num/2), 3, padding=1),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/8 after this
+            nn.Conv2d(self.output_channel_num, int(self.output_channel_num/2), 3, padding=1),  # 1152/2 channels, 576
             nn.BatchNorm2d(int(self.output_channel_num/2)),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            nn.Conv2d(int(self.output_channel_num/2), int(self.output_channel_num/4), 3, padding=1),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/4 after this
+            nn.Conv2d(int(self.output_channel_num/2), int(self.output_channel_num/4), 3, padding=1),  # 288 channels
             nn.BatchNorm2d(int(self.output_channel_num/4)),
             nn.ReLU(),
-            nn.Conv2d(int(self.output_channel_num/4), 96, 1),
+            nn.Conv2d(int(self.output_channel_num/4), 96, 1),  # 96 channels
         )
 
 
@@ -71,24 +71,24 @@ class CostVolumePyramid(nn.Module):
         return psv_16, torch.zeros([psv_volume_4.shape[0], 1, psv_volume_4.shape[2], psv_volume_4.shape[3]])
 
 class StereoMerging(nn.Module):
-    def __init__(self, base_features):
+    def __init__(self, base_features):  # base_features = 34
         super(StereoMerging, self).__init__()
         self.cost_volume_0 = PSMCosineModule(downsample_scale=4, max_disp=96, input_features=base_features)
-        PSV_depth_0 = self.cost_volume_0.depth_channel
+        PSV_depth_0 = self.cost_volume_0.depth_channel  # 96 / 4 = 24
 
         self.cost_volume_1 = PSMCosineModule(downsample_scale=8, max_disp=192, input_features=base_features * 2)
-        PSV_depth_1 = self.cost_volume_1.depth_channel
+        PSV_depth_1 = self.cost_volume_1.depth_channel  # 192 / 8 = 24
 
-        self.cost_volume_2 = CostVolume(downsample_scale=16, max_disp=192, input_features=base_features * 4, PSM_features=8)
-        PSV_depth_2 = self.cost_volume_2.output_channel
+        self.cost_volume_2 = CostVolume(downsample_scale=16, max_disp=192, input_features=base_features * 4, PSM_features=8)  # 136
+        PSV_depth_2 = self.cost_volume_2.output_channel  # 8 * 192 / 16 = 96
 
         self.depth_reasoning = CostVolumePyramid(PSV_depth_0, PSV_depth_1, PSV_depth_2)
         self.final_channel = self.depth_reasoning.output_channel_num + base_features * 4
 
     def forward(self, left_x, right_x):
-        PSVolume_0 = self.cost_volume_0(left_x[0], right_x[0])
-        PSVolume_1 = self.cost_volume_1(left_x[1], right_x[1])
-        PSVolume_2 = self.cost_volume_2(left_x[2], right_x[2])
+        PSVolume_0 = self.cost_volume_0(left_x[0], right_x[0])  # 96 // 4
+        PSVolume_1 = self.cost_volume_1(left_x[1], right_x[1])  # 192 // 8
+        PSVolume_2 = self.cost_volume_2(left_x[2], right_x[2])  # 192 // 16
         PSV_features, depth_output = self.depth_reasoning(PSVolume_0, PSVolume_1, PSVolume_2) # c = 1152
         features = torch.cat([left_x[2], PSV_features], dim=1) # c = 1152 + 256 = 1408
         return features, depth_output
@@ -113,12 +113,12 @@ class YoloStereo3DCore(nn.Module):
         left_images = images[:, 0:3, :, :]
         right_images = images[:, 3:, :, :]
 
-        images = torch.cat([left_images, right_images], dim=0)
+        images = torch.cat([left_images, right_images], dim=0)  # 2*B, 3, H, W
 
-        features = self.backbone(images)
+        features = self.backbone(images)  # Feature_levels, 2*B, Filters,. H, W
 
-        left_features  = [feature[0:batch_size] for feature in features]
-        right_features = [feature[batch_size:]  for feature in features]
+        left_features  = [feature[0:batch_size] for feature in features]  # Feature_levels, B, Filters, H, W
+        right_features = [feature[batch_size:]  for feature in features]  # Feature_levels, B, Filters, H, W
 
         features, depth_output = self.neck(left_features, right_features)
 

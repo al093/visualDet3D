@@ -57,7 +57,7 @@ class CostVolume(nn.Module):
 
         for i in range(self.depth_channel):
             if i > 0 :
-                 cost[:, :left_features.size()[1], i, :,i:]  = left_features[:,:,:,i:]
+                 cost[:, :left_features.size()[1], i, :,i:]  = left_features[:,:,:,i:] # BS, F, H, W , cost is BS, 2*F, shift, H, W
                  cost[:, left_features.size()[1]:, i, :,i:]  = right_features[:,:,:,:-i]
             else:
                  cost[:, :left_features.size()[1], i, :,:]   = left_features
