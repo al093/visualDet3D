@@ -65,7 +65,8 @@ class Stereo3D(nn.Module):
         cls_loss, reg_loss, loss_dict = self.bbox_head.loss(cls_preds, reg_preds, anchors, annotations, P2)
 
         if reg_loss.mean() > 0 and not disparity is None and not depth_output is None:
-            disp_loss = 1.0 * self.disparity_loss(depth_output, disparity)
+            # disp_loss = 1.0 * self.disparity_loss(depth_output, disparity)
+            disp_loss = (depth_output - depth_output).mean()
             loss_dict['disparity_loss'] = disp_loss
             reg_loss += disp_loss
 
