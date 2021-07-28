@@ -21,7 +21,7 @@ class GhostModule(nn.Module):
     def __init__(self, inp, oup, kernel_size=1, ratio=2, dw_size=3, stride=1, relu=True):
         super(GhostModule, self).__init__()
         self.oup = oup
-        init_channels = math.ceil(oup / ratio)
+        init_channels = math.ceil(oup / ratio) # 3*inp / 2
         new_channels = init_channels*(ratio-1)
 
         self.primary_conv = nn.Sequential(
