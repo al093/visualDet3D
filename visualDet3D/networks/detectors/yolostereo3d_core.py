@@ -13,33 +13,33 @@ from visualDet3D.networks.lib.look_ground import LookGround
 
 class CostVolumePyramid(nn.Module):
     """Some Information about CostVolumePyramid"""
-    def __init__(self, depth_channel_4, depth_channel_8, depth_channel_16):
+    def __init__(self, depth_channel_16):
         super(CostVolumePyramid, self).__init__()
-        self.depth_channel_4  = depth_channel_4 # 24
-        self.depth_channel_8  = depth_channel_8 # 24
+        # self.depth_channel_4  = depth_channel_4 # 24
+        # self.depth_channel_8  = depth_channel_8 # 24
         self.depth_channel_16 = depth_channel_16 # 96
 
-        input_features = depth_channel_4 # 24
-        self.four_to_eight = nn.Sequential(
-            ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
-            nn.AvgPool2d(2),
-            #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
-            #nn.BatchNorm2d(3 * input_features),
-            #nn.ReLU(),
-            BasicBlock(3 * input_features, 3 * input_features),
-        )
-        input_features = 3 * input_features + depth_channel_8  # 3 * 24 + 24 = 96
-        self.eight_to_sixteen = nn.Sequential(
-            ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
-            nn.AvgPool2d(2),
-            BasicBlock(3 * input_features, 3 * input_features),
-            #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
-            #nn.BatchNorm2d(3 * input_features),
-            #nn.ReLU(),
-        )
-        input_features = 3 * input_features + depth_channel_16 # 3 * 96 + 96 = 384
+        # input_features = depth_channel_4 # 24
+        # self.four_to_eight = nn.Sequential(
+        #     ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
+        #     nn.AvgPool2d(2),
+        #     nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
+        #     nn.BatchNorm2d(3 * input_features),
+        #     nn.ReLU(),
+            # BasicBlock(3 * input_features, 3 * input_features),
+        # )
+        # input_features = 3 * input_features + depth_channel_8  # 3 * 24 + 24 = 96
+        # self.eight_to_sixteen = nn.Sequential(
+        #     ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
+        #     nn.AvgPool2d(2),
+        #     BasicBlock(3 * input_features, 3 * input_features),
+        #     nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
+        #     nn.BatchNorm2d(3 * input_features),
+        #     nn.ReLU(),
+        # )
+        input_features = 3 * depth_channel_16 + depth_channel_16  # 3 * 96 + 96 = 384
         self.depth_reason = nn.Sequential(
-            ResGhostModule(input_features, 3 * input_features, kernel_size=3, ratio=3),
+            ResGhostModule(depth_channel_16, 3 * input_features, kernel_size=3, ratio=3),
             BasicBlock(3 * input_features, 3 * input_features),
             #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
             #nn.BatchNorm2d(3 * input_features),
@@ -60,36 +60,37 @@ class CostVolumePyramid(nn.Module):
         )
 
 
-    def forward(self, psv_volume_4, psv_volume_8, psv_volume_16):
-        psv_4_8 = self.four_to_eight(psv_volume_4)
-        psv_volume_8 = torch.cat([psv_4_8, psv_volume_8], dim=1)
-        psv_8_16 = self.eight_to_sixteen(psv_volume_8)
-        psv_volume_16 = torch.cat([psv_8_16, psv_volume_16], dim=1)
+    def forward(self, psv_volume_16):
+        # psv_4_8 = self.four_to_eight(psv_volume_4)
+        # psv_volume_8 = torch.cat([psv_4_8, psv_volume_8], dim=1)
+        # psv_8_16 = self.eight_to_sixteen(psv_volume_8)
+        # psv_volume_16 = torch.cat([psv_8_16, psv_volume_16], dim=1)
         psv_16 = self.depth_reason(psv_volume_16)
         if self.training:
             return psv_16, self.depth_output(psv_16)
-        return psv_16, torch.zeros([psv_volume_4.shape[0], 1, psv_volume_4.shape[2], psv_volume_4.shape[3]])
+        return psv_16, torch.zeros([psv_volume_16.shape[0], 1, psv_volume_16.shape[2] * 4, psv_volume_16.shape[3] * 4])
 
 class StereoMerging(nn.Module):
     def __init__(self, base_features):  # base_features = 34
         super(StereoMerging, self).__init__()
-        self.cost_volume_0 = PSMCosineModule(downsample_scale=4, max_disp=96, input_features=base_features)
-        PSV_depth_0 = self.cost_volume_0.depth_channel  # 96 / 4 = 24
-
-        self.cost_volume_1 = PSMCosineModule(downsample_scale=8, max_disp=192, input_features=base_features * 2)
-        PSV_depth_1 = self.cost_volume_1.depth_channel  # 192 / 8 = 24
+        # self.cost_volume_0 = PSMCosineModule(downsample_scale=4, max_disp=96, input_features=base_features)
+        # PSV_depth_0 = self.cost_volume_0.depth_channel  # 96 / 4 = 24
+        #
+        # self.cost_volume_1 = PSMCosineModule(downsample_scale=8, max_disp=192, input_features=base_features * 2)
+        # PSV_depth_1 = self.cost_volume_1.depth_channel  # 192 / 8 = 24
 
         self.cost_volume_2 = CostVolume(downsample_scale=16, max_disp=192, input_features=base_features * 4, PSM_features=8)  # 136
         PSV_depth_2 = self.cost_volume_2.output_channel  # 8 * 192 / 16 = 96
 
-        self.depth_reasoning = CostVolumePyramid(PSV_depth_0, PSV_depth_1, PSV_depth_2)
+        self.depth_reasoning = CostVolumePyramid(PSV_depth_2)
         self.final_channel = self.depth_reasoning.output_channel_num + base_features * 4
 
     def forward(self, left_x, right_x):
-        PSVolume_0 = self.cost_volume_0(left_x[0], right_x[0])  # 96 // 4
-        PSVolume_1 = self.cost_volume_1(left_x[1], right_x[1])  # 192 // 8
+        # PSVolume_0 = self.cost_volume_0(left_x[0], right_x[0])  # 96 // 4
+        # PSVolume_1 = self.cost_volume_1(left_x[1], right_x[1])  # 192 // 8
         PSVolume_2 = self.cost_volume_2(left_x[2], right_x[2])  # 192 // 16
-        PSV_features, depth_output = self.depth_reasoning(PSVolume_0, PSVolume_1, PSVolume_2) # c = 1152
+        # PSV_features, depth_output = self.depth_reasoning(PSVolume_0, PSVolume_1, PSVolume_2) # c = 1152
+        PSV_features, depth_output = self.depth_reasoning(PSVolume_2) # c = 1152
         features = torch.cat([left_x[2], PSV_features], dim=1) # c = 1152 + 256 = 1408
         return features, depth_output
 
