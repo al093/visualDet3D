@@ -39,7 +39,7 @@ def main(config:str="config/config.py",
 
     state_dict = torch.load(checkpoint_path, map_location='cuda:{}'.format(cfg.trainer.gpu))
     new_dict = state_dict.copy()
-    detector.load_state_dict(new_dict, strict=False)
+    detector.load_state_dict(new_dict, strict=True)
     detector.eval()
 
     if 'evaluate_func' in cfg.trainer:
