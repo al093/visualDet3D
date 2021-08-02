@@ -67,7 +67,8 @@ class AnchorBasedDetection3DHead(nn.Module):
         self.cls_feature_extraction[-2].bias.data.fill_(0)
 
         self.reg_feature_extraction = nn.Sequential(
-            ModulatedDeformConvPack(num_features_in, reg_feature_size, 3, padding=1),
+            # ModulatedDeformConvPack(num_features_in, reg_feature_size, 3, padding=1),
+            nn.Conv2d(num_features_in, reg_feature_size, kernel_size=3, padding=1),
             nn.BatchNorm2d(reg_feature_size),
             nn.ReLU(inplace=True),
             nn.Conv2d(reg_feature_size, reg_feature_size, kernel_size=3, padding=1),
