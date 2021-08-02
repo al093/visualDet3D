@@ -309,7 +309,7 @@ class AnchorBasedDetection3DHead(nn.Module):
         return scores, bboxes, labels
 
     def get_anchor(self, img_batch, P2):
-        is_filtering = getattr(self.loss_cfg, 'filter_anchor', False) # TODO(alok) do not filter.
+        is_filtering = getattr(self.loss_cfg, 'filter_anchor', True)
         if not self.training:
             is_filtering = getattr(self.test_cfg, 'filter_anchor', is_filtering)
 
