@@ -79,8 +79,19 @@ class StereoMerging(nn.Module):
         self.cost_volume_1 = PSMCosineModule(downsample_scale=8, max_disp=192, input_features=base_features * 2)
         PSV_depth_1 = self.cost_volume_1.depth_channel  # 192 / 8 = 24
 
-        self.cost_volume_2 = CostVolume(downsample_scale=16, max_disp=192, input_features=base_features * 4, PSM_features=8)  # 136
-        PSV_depth_2 = self.cost_volume_2.output_channel  # 8 * 192 / 16 = 96
+        # self.cost_volume_2 = CostVolume(downsample_scale=16, max_disp=192, input_features=base_features * 4, PSM_features=8)  # 136
+        # PSV_depth_2 = self.cost_volume_2.output_channel  # 8 * 192 / 16 = 96
+        self.cost_volume_2 = PSMCosineModule(downsample_scale=16, max_disp=192, input_features=base_features * 4)  # 136
+        self.cost_volume_2_aux = torch.nn.Sequential(
+            nn.Conv2d(192 // 16, 96, 3, padding=1),
+            nn.BatchNorm2d(96),
+            nn.ReLU(),
+            nn.Conv2d(96, 96, 3, padding=1),
+            nn.BatchNorm2d(96),
+            nn.ReLU(),
+        )
+        PSV_depth_2 = 96
+
 
         self.depth_reasoning = CostVolumePyramid(PSV_depth_0, PSV_depth_1, PSV_depth_2)
         self.final_channel = self.depth_reasoning.output_channel_num + base_features * 4
@@ -89,6 +100,7 @@ class StereoMerging(nn.Module):
         PSVolume_0 = self.cost_volume_0(left_x[0], right_x[0])  # 96 // 4
         PSVolume_1 = self.cost_volume_1(left_x[1], right_x[1])  # 192 // 8
         PSVolume_2 = self.cost_volume_2(left_x[2], right_x[2])  # 192 // 16
+        PSVolume_2 = self.cost_volume_2_aux(PSVolume_2)
         PSV_features, depth_output = self.depth_reasoning(PSVolume_0, PSVolume_1, PSVolume_2) # c = 1152
         features = torch.cat([left_x[2], PSV_features], dim=1) # c = 1152 + 256 = 1408
         return features, depth_output
