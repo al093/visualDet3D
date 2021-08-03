@@ -41,7 +41,7 @@ class CostVolume(nn.Module):
             nn.ReLU(),
         )
         self.output_channel = PSM_features * self.depth_channel
-    @profile("Cost Volume", 1, 10)
+
     def forward(self, left_features, right_features):
         batch_size, _, w, h = left_features.shape
         left_features = self.down_sample(left_features)
@@ -77,7 +77,6 @@ class PSMCosineModule(nn.Module):
         self.depth_channel = int(self.max_disp / self.downsample_scale)
         #self.distance_function = nn.CosineSimilarity(dim=1)
 
-    @profile("PSM Cos Volume", 1, 20)
     def forward(self, left_features, right_features):
         cost = Variable(
             torch.FloatTensor(left_features.size()[0],
