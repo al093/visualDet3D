@@ -29,6 +29,11 @@ class SigmoidFocalLoss(nn.Module):
             gamma = self.gamma
         if balance_weights is None:
             balance_weights = self.balance_weights
+        # print("Class 0 occurred: ", torch.sum(torch.eq(targets[..., 0], 1.0)))
+        # print("Class 1 occurred: ", torch.sum(torch.eq(targets[..., 1], 1.0)))
+        # print("Dont care occurred: ", torch.sum(torch.eq(targets, -1.0)))
+        # print("FG occurred: ", torch.sum(torch.eq(targets, 1.0)))
+        # print("BG occurred: ", torch.sum(torch.eq(targets, 0.0)))
 
         probs = torch.sigmoid(classification) #[B, N, 1]
         focal_weight = torch.where(torch.eq(targets, 1.), 1. - probs, probs)
