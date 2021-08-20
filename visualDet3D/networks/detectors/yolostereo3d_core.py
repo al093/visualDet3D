@@ -22,7 +22,7 @@ class CostVolumePyramid(nn.Module):
         input_features = depth_channel_4 # 24
         self.four_to_eight = nn.Sequential(
             # ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
-            BasicBlock(input_features, 3 * input_features),
+            nn.Conv2d(input_features, 3*input_features, kernel_size=3, padding=1),
             nn.AvgPool2d(2),
             #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
             #nn.BatchNorm2d(3 * input_features),
@@ -32,7 +32,7 @@ class CostVolumePyramid(nn.Module):
         input_features = 3 * input_features + depth_channel_8  # 3 * 24 + 24 = 96
         self.eight_to_sixteen = nn.Sequential(
             # ResGhostModule(input_features, 3 * input_features, 3, ratio=3),
-            BasicBlock(input_features, 3 * input_features),
+            nn.Conv2d(input_features, 3 * input_features, kernel_size=3, padding=1),
             nn.AvgPool2d(2),
             BasicBlock(3 * input_features, 3 * input_features),
             #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
@@ -42,7 +42,7 @@ class CostVolumePyramid(nn.Module):
         input_features = 3 * input_features + depth_channel_16 # 3 * 96 + 96 = 384
         self.depth_reason = nn.Sequential(
             # ResGhostModule(input_features, 3 * input_features, kernel_size=3, ratio=3),
-            BasicBlock(input_features, 3 * input_features),
+            nn.Conv2d(input_features, 3 * input_features, kernel_size=3, padding=1),
             BasicBlock(3 * input_features, 3 * input_features),
             #nn.Conv2d(3 * input_features, 3 * input_features, 3, padding=1, bias=False),
             #nn.BatchNorm2d(3 * input_features),
