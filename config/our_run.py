@@ -76,8 +76,8 @@ cfg.scheduler = scheduler
 ## data
 data = edict(
     batch_size = 4,
-    num_workers = 4,
-    rgb_shape = (288, 1280, 3),
+    num_workers = 6,
+    rgb_shape = (384, 1280, 3),
     train_dataset = "KittiStereoDataset",
     val_dataset   = "KittiStereoDataset",
     test_dataset  = "KittiStereoTestDataset",
@@ -89,7 +89,7 @@ data.augmentation = edict(
     rgb_mean = np.array([0.485, 0.456, 0.406]),
     rgb_std  = np.array([0.229, 0.224, 0.225]),
     cropSize = (data.rgb_shape[0], data.rgb_shape[1]),
-    # crop_top = 100, 1
+    # crop_top = 100
 )
 
 data.train_augmentation = [
