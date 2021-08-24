@@ -103,7 +103,7 @@ def train_stereo_detection(data, module:nn.Module,
             [left_images.cuda().float().contiguous(), right_images.cuda().float().contiguous(),
              left_images.new(annotation).cuda(),
              P2.cuda(), P3.cuda(),
-             disparity.cuda().contiguous()]
+             None]  # disparity.cuda().contiguous()] #TODO|NOTE (alok) removed disparity
         )
 
     classification_loss = classification_loss.mean()
