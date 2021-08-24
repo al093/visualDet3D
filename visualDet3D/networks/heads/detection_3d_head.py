@@ -189,8 +189,8 @@ class AnchorBasedDetection3DHead(nn.Module):
         gw = sampled_gt_bboxes[..., 2] - sampled_gt_bboxes[..., 0]
         gh = sampled_gt_bboxes[..., 3] - sampled_gt_bboxes[..., 1]
 
-        targets_dx = (gx - px) / pw
-        targets_dy = (gy - py) / ph
+        targets_dx = (gx - px) / pw  # ( gt_center_X - anchor_center_X ) / anchor_width
+        targets_dy = (gy - py) / ph  # ( gt_center_Y - anchor_center_Y ) / anchor width
         targets_dw = torch.log(gw / pw)
         targets_dh = torch.log(gh / ph)
 
