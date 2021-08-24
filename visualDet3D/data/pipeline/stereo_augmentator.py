@@ -68,7 +68,7 @@ class Resize(object):
 
     If the object has ground truths we also scale the (known) box coordinates.
     """
-    def __init__(self, size, preserve_aspect_ratio=True):
+    def __init__(self, size, preserve_aspect_ratio=False):
         self.size = size
         self.preserve_aspect_ratio = preserve_aspect_ratio
 
