@@ -50,17 +50,18 @@ class CostVolumePyramid(nn.Module):
         )
         self.output_channel_num = 3 * input_features  # 1152
 
-        self.depth_output = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/8 after this
-            nn.Conv2d(self.output_channel_num, int(self.output_channel_num/2), 3, padding=1),  # 1152/2 channels, 576
-            nn.BatchNorm2d(int(self.output_channel_num/2)),
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/4 after this
-            nn.Conv2d(int(self.output_channel_num/2), int(self.output_channel_num/4), 3, padding=1),  # 288 channels
-            nn.BatchNorm2d(int(self.output_channel_num/4)),
-            nn.ReLU(),
-            nn.Conv2d(int(self.output_channel_num/4), 96, 1),  # 96 channels
-        )
+        # TODO | NOTE (alok) Removed this as we are not interested in training for disparity for now.
+        # self.depth_output = nn.Sequential(
+        #     nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/8 after this
+        #     nn.Conv2d(self.output_channel_num, int(self.output_channel_num/2), 3, padding=1),  # 1152/2 channels, 576
+        #     nn.BatchNorm2d(int(self.output_channel_num/2)),
+        #     nn.ReLU(),
+        #     nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),  # 1/4 after this
+        #     nn.Conv2d(int(self.output_channel_num/2), int(self.output_channel_num/4), 3, padding=1),  # 288 channels
+        #     nn.BatchNorm2d(int(self.output_channel_num/4)),
+        #     nn.ReLU(),
+        #     nn.Conv2d(int(self.output_channel_num/4), 96, 1),  # 96 channels
+        # )
 
 
     def forward(self, psv_volume_4, psv_volume_8, psv_volume_16):
@@ -70,7 +71,7 @@ class CostVolumePyramid(nn.Module):
         psv_volume_16 = torch.cat([psv_8_16, psv_volume_16], dim=1)
         psv_16 = self.depth_reason(psv_volume_16)
         if self.training:
-            return psv_16, self.depth_output(psv_16)
+            return psv_16, torch.zeros([psv_volume_4.shape[0], 1, psv_volume_4.shape[2], psv_volume_4.shape[3]]) # self.depth_output(psv_16)
         return psv_16, torch.zeros([psv_volume_4.shape[0], 1, psv_volume_4.shape[2], psv_volume_4.shape[3]])
 
 class StereoMerging(nn.Module):
