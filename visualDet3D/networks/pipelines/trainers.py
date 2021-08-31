@@ -90,7 +90,7 @@ def train_stereo_detection(data, module:nn.Module,
                      epoch_num:int=None,
                      cfg:EasyDict=EasyDict()):
     optimizer.zero_grad()
-    left_images, right_images, P2, P3, labels, bbox2d, bbox_3d, disparity = data
+    left_images, right_images, P2, P3, labels, bbox2d, bbox_3d, index, disparity = data
 
     # create compound array of annotation
     max_length = np.max([len(label) for label in labels])
@@ -103,6 +103,7 @@ def train_stereo_detection(data, module:nn.Module,
             [left_images.cuda().float().contiguous(), right_images.cuda().float().contiguous(),
              left_images.new(annotation).cuda(),
              P2.cuda(), P3.cuda(),
+             index,
              None]  # disparity.cuda().contiguous()] #TODO|NOTE (alok) removed disparity
         )
 

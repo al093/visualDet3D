@@ -53,7 +53,7 @@ class KittiStereoDataset(torch.utils.data.Dataset):
             self.transform = build_augmentator(cfg.data.train_augmentation)
         else:
             self.transform = build_augmentator(cfg.data.test_augmentation)
-        self.projector = BBox3dProjector()
+        self.projector = BBox3dProjector(is_theta=True)
         self.is_train = is_train
         self.obj_types = obj_types
         self.preprocessed_path = preprocessed_path
@@ -98,7 +98,7 @@ class KittiStereoDataset(torch.utils.data.Dataset):
         kitti_data = self.imdb[index]
         # The calib and label has been preloaded to minimize the time in each indexing
         kitti_data.output_dict = self.output_dict
-        calib, left_image, right_image, _, _ = kitti_data.read_data()
+            calib, left_image, right_image, _, _, data_idx = kitti_data.read_data()
         calib.image_shape = left_image.shape
         label = []
         for obj in kitti_data.label:
@@ -131,7 +131,8 @@ class KittiStereoDataset(torch.utils.data.Dataset):
                        'bbox3d': bbox3d_state,
                        'original_shape': calib.image_shape,
                        'disparity': disparity,
-                       'original_P':calib.P2.copy()}
+                       'original_P':calib.P2.copy(),
+                       'index': data_idx}
         return output_dict
 
     def __len__(self):
@@ -151,10 +152,12 @@ class KittiStereoDataset(torch.utils.data.Dataset):
         bbox2ds = [item['bbox2d'] for item in batch]
         bbox3ds = [item['bbox3d'] for item in batch]
         disparities = [item['disparity'] for item in batch]
+        indices = [item['index'] for item in batch]
         if disparities[0] is None:
-            return torch.from_numpy(left_images).float(), torch.from_numpy(right_images).float(), torch.tensor(P2).float(), torch.tensor(P3).float(), label, bbox2ds, bbox3ds
+            return torch.from_numpy(left_images).float(), torch.from_numpy(right_images).float(), torch.tensor(P2).float(), torch.tensor(P3).float(), label, bbox2ds, bbox3ds, indices
         else:
-            return torch.from_numpy(left_images).float(), torch.from_numpy(right_images).float(), torch.tensor(P2).float(), torch.tensor(P3).float(), label, bbox2ds, bbox3ds, torch.tensor(disparities).float()
+            return torch.from_numpy(left_images).float(), torch.from_numpy(right_images).float(), torch.tensor(P2).float(), torch.tensor(P3).float(), label, bbox2ds, bbox3ds, indices, \
+                   torch.tensor(disparities).float()
 
 @DATASET_DICT.register_module
 class KittiStereoTestDataset(KittiStereoDataset):

@@ -399,7 +399,7 @@ class AnchorBasedDetection3DHead(nn.Module):
 
         return max_score, bboxes, label
 
-    def loss(self, cls_scores, reg_preds, anchors, annotations, P2s):
+    def loss(self, cls_scores, reg_preds, anchors, annotations, P2s, index):
         batch_size = cls_scores.shape[0]
 
         anchor = anchors['anchors'][0] #[N, 4]
@@ -486,7 +486,7 @@ class AnchorBasedDetection3DHead(nn.Module):
             cls_loss.append(self.loss_cls(cls_score, labels).sum() / (len(pos_inds) + len(neg_inds)))
 
         cls_loss = torch.stack(cls_loss).mean(dim=0, keepdim=True)
-        reg_loss = torch.stack(reg_loss, dim=0) #[B, 12]
+        reg_loss = torch.stack(reg_loss, dim=0) #[B, 13]
 
         weights = reg_pred.new(number_of_positives).unsqueeze(1)  # [B, 1]
         weighted_regression_losses = torch.sum(weights * reg_loss / (torch.sum(weights) + 1e-6), dim=0)

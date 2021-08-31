@@ -39,7 +39,7 @@ class Stereo3D(nn.Module):
 
         self.disparity_loss = losses.DisparityLoss(maxdisp=96)
 
-    def train_forward(self, left_images, right_images, annotations, P2, P3, disparity=None):
+    def train_forward(self, left_images, right_images, annotations, P2, P3, index, disparity=None):
         """
         Args:
             img_batch: [B, C, H, W] tensor
@@ -62,7 +62,7 @@ class Stereo3D(nn.Module):
 
         anchors = self.bbox_head.get_anchor(left_images, P2)
 
-        cls_loss, reg_loss, loss_dict = self.bbox_head.loss(cls_preds, reg_preds, anchors, annotations, P2)
+        cls_loss, reg_loss, loss_dict = self.bbox_head.loss(cls_preds, reg_preds, anchors, annotations, P2, index)
 
         if reg_loss.mean() > 0 and not disparity is None and not depth_output is None:
             # disp_loss = 1.0 * self.disparity_loss(depth_output, disparity)

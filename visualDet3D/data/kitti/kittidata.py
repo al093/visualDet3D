@@ -214,6 +214,7 @@ class KittiData:
         self.image3_path = os.path.join(root_dir, 'image_3', idx+'.png')
         self.label2_path = os.path.join(root_dir, "label_2", idx+'.txt')
         self.velodyne_path = os.path.join(root_dir, "velodyne", idx+'.bin')
+        self.idx = idx
         self.output_dict = output_dict
         if self.output_dict is None:
             self.output_dict = {
@@ -246,6 +247,6 @@ class KittiData:
         if 'image_3' in self.output_dict and self.output_dict['image_3']:
             image_3 = read_image(self.image3_path) if self.output_dict["image_3"] else None
 
-            return calib, image, image_3, label, pc
+            return calib, image, image_3, label, pc, self.idx
         else:
-            return calib, image, label, pc
+            return calib, image, label, pc, self.idx
