@@ -71,7 +71,7 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
 
         # read data with dataloader api
         data_frame = KittiData(data_root_dir, index_name, output_dict)
-        calib, image, label, velo = data_frame.read_data()
+        calib, image, label, velo, _ = data_frame.read_data()
 
         # store the list of kittiObjet and kittiCalib
         max_occlusion = getattr(cfg.data, 'max_occlusion', 2)
@@ -80,22 +80,20 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
             data_frame.label = [obj for obj in label.data if obj.type in cfg.obj_types and obj.occluded < max_occlusion and obj.z > min_z]
             
             if anchor_prior:
-                for j in range(len(cfg.obj_types)):
-                    total_objects[j] += len([obj for obj in data_frame.label if obj.type==cfg.obj_types[j]])
+                for obj_type_idx in range(len(cfg.obj_types)):
+                    total_objects[obj_type_idx] += len([obj for obj in data_frame.label if obj.type==cfg.obj_types[obj_type_idx]])
                     data = np.array(
                         [
                             [obj.z, np.sin(2 * obj.alpha), np.cos(2 * obj.alpha), obj.w, obj.h, obj.l] 
-                                for obj in data_frame.label if obj.type==cfg.obj_types[j]
+                                for obj in data_frame.label if obj.type==cfg.obj_types[obj_type_idx]
                         ]
                     ) #[N, 6]
                     if data.any():
-                        uniform_sum_each_type[j, :] += np.sum(data, axis=0)
-                        uniform_square_each_type[j, :] += np.sum(data ** 2, axis=0)
+                        uniform_sum_each_type[obj_type_idx, :] += np.sum(data, axis=0)
+                        uniform_square_each_type[obj_type_idx, :] += np.sum(data ** 2, axis=0)
         else:
             data_frame.label = [obj for obj in label.data if obj.type in cfg.obj_types]
         data_frame.calib = calib
-        
-
 
         if data_split == 'training' and anchor_prior:
             original_image = image.copy()
@@ -107,13 +105,12 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
             if len(data_frame.label) > 0:
                 anchors, _ = anchor_manager(image[np.newaxis].transpose([0,3,1,2]), torch.tensor(P2).reshape([-1, 3, 4]))
 
-                for j in range(len(cfg.obj_types)):
-                    bbox2d = torch.tensor([[obj.bbox_l, obj.bbox_t, obj.bbox_r, obj.bbox_b] for obj in label if obj.type == cfg.obj_types[j]]).cuda()
+                for obj_type_idx in range(len(cfg.obj_types)):
+                    bbox2d = torch.tensor([[obj.bbox_l, obj.bbox_t, obj.bbox_r, obj.bbox_b] for obj in label if obj.type == cfg.obj_types[obj_type_idx]]).cuda()
                     if len(bbox2d) < 1:
                         continue
-                    bbox3d = torch.tensor([[obj.x, obj.y, obj.z, np.sin(2 * obj.alpha), np.cos(2 * obj.alpha)] for obj in label if obj.type == cfg.obj_types[j]]).cuda()
+                    bbox3d = torch.tensor([[obj.x, obj.y, obj.z, np.sin(2 * obj.alpha), np.cos(2 * obj.alpha)] for obj in label if obj.type == cfg.obj_types[obj_type_idx]]).cuda()
 
-                    
                     usable_anchors = anchors[0]
 
                     IoUs = calc_iou(usable_anchors, bbox2d) #[N, K]
@@ -121,19 +118,19 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
                     IoU_max_anchor, IoU_argmax_anchor = torch.max(IoUs, dim=1)
 
                     num_usable_object = torch.sum(IoU_max > cfg.detector.head.loss_cfg.fg_iou_threshold).item()
-                    total_usable_objects[j] += num_usable_object
+                    total_usable_objects[obj_type_idx] += num_usable_object
 
-                    positive_anchors_mask = IoU_max_anchor > cfg.detector.head.loss_cfg.fg_iou_threshold
+                    positive_anchors_mask = IoU_max_anchor >= cfg.detector.head.loss_cfg.fg_iou_threshold
                     positive_ground_truth_3d = bbox3d[IoU_argmax_anchor[positive_anchors_mask]].cpu().numpy()
 
                     used_anchors = usable_anchors[positive_anchors_mask].cpu().numpy() #[x1, y1, x2, y2]
+                    print(f"dataset idx: {index_name}, matched anchors for gt id {obj_type_idx}", positive_anchors_mask.sum())
 
                     sizes_int, ratio_int = anchor_manager.anchors2indexes(used_anchors)
                     for k in range(len(sizes_int)):
-                        examine[j, sizes_int[k], ratio_int[k]] += 1
-                        sums[j, sizes_int[k], ratio_int[k]] += positive_ground_truth_3d[k, 2:5]
-                        squared[j, sizes_int[k], ratio_int[k]] += positive_ground_truth_3d[k, 2:5] ** 2
-
+                        examine[obj_type_idx, sizes_int[k], ratio_int[k]] += 1
+                        sums[obj_type_idx, sizes_int[k], ratio_int[k]] += positive_ground_truth_3d[k, 2:5]
+                        squared[obj_type_idx, sizes_int[k], ratio_int[k]] += positive_ground_truth_3d[k, 2:5] ** 2
         frames[i] = data_frame
 
         if (i+1) % time_display_inter == 0:
@@ -147,16 +144,16 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
         os.makedirs(save_dir)
     if data_split == 'training' and anchor_prior:
         
-        for j in range(len(cfg.obj_types)):
-            global_mean = uniform_sum_each_type[j] / total_objects[j]
-            global_var  = np.sqrt(uniform_square_each_type[j] / total_objects[j] - global_mean ** 2)
+        for obj_type_idx in range(len(cfg.obj_types)):
+            global_mean = uniform_sum_each_type[obj_type_idx] / total_objects[obj_type_idx]
+            global_var  = np.sqrt(uniform_square_each_type[obj_type_idx] / total_objects[obj_type_idx] - global_mean ** 2)
 
-            avg = sums[j] / (examine[j][:, :, np.newaxis] + 1e-8)
-            EX_2 = squared[j] / (examine[j][:, :, np.newaxis] + 1e-8)
+            avg = sums[obj_type_idx] / (examine[obj_type_idx][:, :, np.newaxis] + 1e-8)
+            EX_2 = squared[obj_type_idx] / (examine[obj_type_idx][:, :, np.newaxis] + 1e-8)
             std = np.sqrt(EX_2 - avg ** 2)
 
-            avg[examine[j] < 10, :] = -100  # with such negative mean Z, anchors/losses will filter them out
-            std[examine[j] < 10, :] = 1e10
+            avg[examine[obj_type_idx] < 10, :] = -100  # with such negative mean Z, anchors/losses will filter them out
+            std[examine[obj_type_idx] < 10, :] = 1e10
             avg[np.isnan(std)]      = -100
             std[np.isnan(std)]      = 1e10
             avg[std < 1e-3]         = -100
@@ -168,9 +165,9 @@ def read_one_split(cfg, index_names, data_root_dir, output_dict, data_split = 't
             avg = np.concatenate([avg, whl_avg], axis=2)
             std = np.concatenate([std, whl_std], axis=2)
 
-            npy_file = os.path.join(save_dir,'anchor_mean_{}.npy'.format(cfg.obj_types[j]))
+            npy_file = os.path.join(save_dir,'anchor_mean_{}.npy'.format(cfg.obj_types[obj_type_idx]))
             np.save(npy_file, avg)
-            std_file = os.path.join(save_dir,'anchor_std_{}.npy'.format(cfg.obj_types[j]))
+            std_file = os.path.join(save_dir,'anchor_std_{}.npy'.format(cfg.obj_types[obj_type_idx]))
             np.save(std_file, std)
     pkl_file = os.path.join(save_dir,'imdb.pkl')
     pickle.dump(frames, open(pkl_file, 'wb'))
