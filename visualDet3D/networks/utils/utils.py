@@ -208,21 +208,23 @@ class BBox3dProjector(nn.Module):
     """
     def __init__(self):
         super(BBox3dProjector, self).__init__()
+
+        dz = dy = dx = 1
         self.register_buffer('corner_matrix', torch.tensor(
-            [[-1, -1, -1],
-            [ 1, -1, -1],
-            [ 1,  1, -1],
-            [ 1,  1,  1],
-            [ 1, -1,  1],
-            [-1, -1,  1],
-            [-1,  1,  1],
-            [-1,  1, -1]]
+            [[dz,  dy,   dx],
+             [-dz, dy,   dx],
+             [-dz, dy,  -dx],
+             [dz,  dy,  -dx],
+             [dz,  -dy,  dx],
+             [-dz, -dy,  dx],
+             [-dz, -dy, -dx],
+             [dz,  -dy, -dx]]
         ).float()  )# 8, 3
 
     def forward(self, bbox_3d, tensor_p2):
         """
             input:
-                unnormalize bbox_3d [N, 7] with  x, y, z, w, h, l, alpha
+                unnormalize bbox_3d [N, 7] with  x, y, z, w, h, l, alpha/theta
                 tensor_p2: tensor of [3, 4]
             output:
                 [N, 8, 3] with corner point in camera frame # 8 is determined by the shape of self.corner_matrix
@@ -231,18 +233,15 @@ class BBox3dProjector(nn.Module):
         """
         relative_eight_corners = 0.5 * self.corner_matrix * bbox_3d[:, 3:6].unsqueeze(1)  # [N, 8, 3]
         # [batch, N, ]
-        thetas = alpha2theta_3d(bbox_3d[..., 6], bbox_3d[..., 0], bbox_3d[..., 2], tensor_p2)
+        thetas = bbox_3d[..., 6]  # alpha2theta_3d(bbox_3d[..., 6], bbox_3d[..., 0], bbox_3d[..., 2], tensor_p2)
         _cos = torch.cos(thetas).unsqueeze(1)  # [N, 1]
         _sin = torch.sin(thetas).unsqueeze(1)  # [N, 1]
         rotated_corners_x, rotated_corners_z = (
-            relative_eight_corners[:, :, 2] * _cos +
-                relative_eight_corners[:, :, 0] * _sin,
-        -relative_eight_corners[:, :, 2] * _sin +
-            relative_eight_corners[:, :, 0] * _cos
+            relative_eight_corners[:, :, 2] * _cos + relative_eight_corners[:, :, 0] * _sin,
+           -relative_eight_corners[:, :, 2] * _sin + relative_eight_corners[:, :, 0] * _cos
         )  # relative_eight_corners == [N, 8, 3]
         rotated_corners = torch.stack([rotated_corners_x, relative_eight_corners[:,:,1], rotated_corners_z], dim=-1) #[N, 8, 3]
-        abs_corners = rotated_corners + \
-            bbox_3d[:, 0:3].unsqueeze(1)  # [N, 8, 3]
+        abs_corners = rotated_corners + bbox_3d[:, 0:3].unsqueeze(1)  # [N, 8, 3]
         camera_corners = torch.cat([abs_corners,
             abs_corners.new_ones([abs_corners.shape[0], self.corner_matrix.shape[0], 1])],
             dim=-1).unsqueeze(3)  # [N, 8, 4, 1]

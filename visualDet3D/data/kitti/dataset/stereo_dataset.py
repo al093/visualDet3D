@@ -63,7 +63,7 @@ class KittiStereoDataset(torch.utils.data.Dataset):
         if len(transformed_label) > 0:
             #for obj in transformed_label:
             #    obj.alpha = theta2alpha_3d(obj.ry, obj.x, obj.z, P2)
-            bbox3d_origin = torch.tensor([[obj.x, obj.y - 0.5 * obj.h, obj.z, obj.w, obj.h, obj.l, obj.alpha] for obj in transformed_label], dtype=torch.float32)
+            bbox3d_origin = torch.tensor([[obj.x, obj.y - 0.5 * obj.h, obj.z, obj.w, obj.h, obj.l, obj.ry] for obj in transformed_label], dtype=torch.float32)
             try:
                 abs_corner, homo_corner, _ = self.projector.forward(bbox3d_origin, bbox3d_origin.new(P2))
             except:
