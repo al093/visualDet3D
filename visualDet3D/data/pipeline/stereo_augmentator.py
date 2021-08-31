@@ -379,7 +379,6 @@ class RandomMirror(object):
     """
     def __init__(self, mirror_prob):
         self.mirror_prob = mirror_prob
-        self.projector = BBox3dProjector()
 
     def __call__(self, left_image, right_image=None, p2=None, p3=None, labels=None, image_gt=None, lidar=None):
 

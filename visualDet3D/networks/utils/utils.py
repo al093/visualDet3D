@@ -206,7 +206,7 @@ class BBox3dProjector(nn.Module):
                 [N, 8, 3] with corner point in image frame
                 [N, ] thetas
     """
-    def __init__(self):
+    def __init__(self, is_theta=False):
         super(BBox3dProjector, self).__init__()
 
         dz = dy = dx = 1
@@ -220,6 +220,7 @@ class BBox3dProjector(nn.Module):
              [-dz, -dy, -dx],
              [dz,  -dy, -dx]]
         ).float()  )# 8, 3
+        self._is_theta = is_theta
 
     def forward(self, bbox_3d, tensor_p2):
         """
@@ -233,7 +234,12 @@ class BBox3dProjector(nn.Module):
         """
         relative_eight_corners = 0.5 * self.corner_matrix * bbox_3d[:, 3:6].unsqueeze(1)  # [N, 8, 3]
         # [batch, N, ]
-        thetas = bbox_3d[..., 6]  # alpha2theta_3d(bbox_3d[..., 6], bbox_3d[..., 0], bbox_3d[..., 2], tensor_p2)
+
+        if self._is_theta:
+            thetas = bbox_3d[..., 6]
+        else:
+            thetas = alpha2theta_3d(bbox_3d[..., 6], bbox_3d[..., 0], bbox_3d[..., 2], tensor_p2)
+
         _cos = torch.cos(thetas).unsqueeze(1)  # [N, 1]
         _sin = torch.sin(thetas).unsqueeze(1)  # [N, 1]
         rotated_corners_x, rotated_corners_z = (
