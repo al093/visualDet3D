@@ -98,7 +98,7 @@ class KittiStereoDataset(torch.utils.data.Dataset):
         kitti_data = self.imdb[index]
         # The calib and label has been preloaded to minimize the time in each indexing
         kitti_data.output_dict = self.output_dict
-            calib, left_image, right_image, _, _, data_idx = kitti_data.read_data()
+        calib, left_image, right_image, _, _, data_idx = kitti_data.read_data()
         calib.image_shape = left_image.shape
         label = []
         for obj in kitti_data.label:
