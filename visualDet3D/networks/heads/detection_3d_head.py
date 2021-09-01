@@ -135,7 +135,7 @@ class AnchorBasedDetection3DHead(nn.Module):
             return return_dict
 
         IoU = calc_iou(anchor, annotation[:, :4]) # num_anchors x num_annotations
-
+        np.save(f"/home/alok/3dod-debugging/3dod-pytorch-data-1/data.npy", {"iou": IoU.cpu().numpy()})
         # max for anchor
         max_overlaps, argmax_overlaps = IoU.max(dim=1) # num_anchors
 
@@ -151,7 +151,7 @@ class AnchorBasedDetection3DHead(nn.Module):
 
         if match_low_quality:
             for i in range(num_gt):
-                if gt_max_overlaps[i] >= min_iou_threshold:
+                if gt_max_overlaps[i] > min_iou_threshold:
                     if gt_max_assign_all:
                         max_iou_inds = IoU[:, i] == gt_max_overlaps[i]
                         assigned_gt_inds[max_iou_inds] = i+1
@@ -482,7 +482,8 @@ class AnchorBasedDetection3DHead(nn.Module):
 
             if len(neg_inds) > 0:
                 labels[neg_inds, :] = 0
-            
+
+            np.save(f"/home/alok/3dod-debugging/3dod-pytorch-data/{index[0]}.npy", {"gt_labels": labels.cpu().numpy()})
             cls_loss.append(self.loss_cls(cls_score, labels).sum() / (len(pos_inds) + len(neg_inds)))
 
         cls_loss = torch.stack(cls_loss).mean(dim=0, keepdim=True)
