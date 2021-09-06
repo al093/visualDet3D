@@ -84,14 +84,16 @@ def draw_3D_box(img, corners, color = (255, 255, 0)):
         the order of the corners should be the same with BBox3dProjector
     """
     points = np.array(corners[0:2], dtype=np.int32) #[2, 8]
-    points = [tuple(points[:,i]) for i in range(8)]
-    for i in range(1, 5):
-        cv2.line(img, points[i], points[(i%4+1)], color, 2)
-        cv2.line(img, points[(i + 4)%8], points[((i)%4 + 5)%8], color, 2)
-    cv2.line(img, points[2], points[7], color)
-    cv2.line(img, points[3], points[6], color)
-    cv2.line(img, points[4], points[5],color)
-    cv2.line(img, points[0], points[1], color)
+    points = points.T
+
+    for pts in [points[:4], points[4:]]:
+        for i in range(4):
+            p1, p2 = pts[i], pts[(i + 1) % 4]
+            img = cv2.line(img, p1, p2, color=color)
+
+    for p1, p2 in zip(points[:4], points[4:]):
+        img = cv2.line(img, p1, p2, color=color)
+
     return img
 
 def compound_annotation(labels, max_length, bbox2d, bbox_3d, obj_types):
