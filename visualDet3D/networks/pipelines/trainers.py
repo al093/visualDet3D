@@ -83,14 +83,16 @@ def train_mono_depth(data, module:nn.Module,
 
 @PIPELINE_DICT.register_module
 def train_stereo_detection(data, module:nn.Module,
-                     optimizer:optim.Optimizer,
+                     optimizer:optim.Optimizer=None,
                      writer:SummaryWriter=None, 
                      loss_logger:LossLogger=None, 
                      global_step:int=None,
                      epoch_num:int=None,
                      cfg:EasyDict=EasyDict()):
-    optimizer.zero_grad()
-    left_images, right_images, P2, P3, labels, bbox2d, bbox_3d, index, disparity = data
+    if optimizer:
+        optimizer.zero_grad()
+
+    left_images, right_images, P2, P3, labels, bbox2d, bbox_3d, index, *_ = data
 
     # create compound array of annotation
     max_length = np.max([len(label) for label in labels])
@@ -113,20 +115,21 @@ def train_stereo_detection(data, module:nn.Module,
     if not loss_logger is None:
         # Record loss in a average meter
         loss_logger.update(loss_dict)
+        if optimizer:
+            loss_logger.update({"learning_rate": np.array([optimizer.param_groups[0]['lr']])})
     del loss_dict
 
-    if not optimizer is None:
-        loss = classification_loss + regression_loss
-
+    loss = classification_loss + regression_loss
     if bool(loss == 0):
         del loss, loss_dict
         return
-    loss.backward()
-    # clip loss norm
-        # torch.nn.utils.clip_grad_norm_(module.parameters(), cfg.optimizer.clipped_gradient_norm)
 
-    optimizer.step()
-    optimizer.zero_grad()
+    if optimizer:
+        loss.backward()
+        # clip loss norm
+        # torch.nn.utils.clip_grad_norm_(module.parameters(), cfg.optimizer.clipped_gradient_norm)
+        optimizer.step()
+        optimizer.zero_grad()
 
 @PIPELINE_DICT.register_module
 def train_rtm3d(data, module:nn.Module,
