@@ -123,7 +123,7 @@ def train_stereo_detection(data, module:nn.Module,
         return
     loss.backward()
     # clip loss norm
-    torch.nn.utils.clip_grad_norm_(module.parameters(), cfg.optimizer.clipped_gradient_norm)
+        # torch.nn.utils.clip_grad_norm_(module.parameters(), cfg.optimizer.clipped_gradient_norm)
 
     optimizer.step()
     optimizer.zero_grad()
