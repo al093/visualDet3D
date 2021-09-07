@@ -75,7 +75,7 @@ cfg.scheduler = scheduler
 
 ## data
 data = edict(
-    batch_size = 4,
+    batch_size = 8,
     num_workers = 6,
     rgb_shape = (384, 1280, 3),
     train_dataset = "KittiStereoDataset",
