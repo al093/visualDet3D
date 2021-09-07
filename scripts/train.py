@@ -115,10 +115,11 @@ def main(config="config/config.py", experiment_name="default", world_size=1, loc
 
     ## define loss logger
     training_loss_logger =  LossLogger(writer, 'train') if is_logging else None
+    eval_loss_logger = LossLogger(writer, 'eval') if is_logging else None
 
     ## training pipeline
     if 'training_func' in cfg.trainer:
-        training_dection = PIPELINE_DICT[cfg.trainer.training_func]
+        training_detection = PIPELINE_DICT[cfg.trainer.training_func]
     else:
         raise KeyError
 
@@ -144,7 +145,7 @@ def main(config="config/config.py", experiment_name="default", world_size=1, loc
         if training_loss_logger:
             training_loss_logger.reset()
         for iter_num, data in enumerate(dataloader_train):
-            training_dection(data, detector, optimizer, writer, training_loss_logger, global_step, epoch_num, cfg)
+            training_detection(data, detector, optimizer, writer, training_loss_logger, global_step, epoch_num, cfg)
 
             global_step += 1
 
@@ -160,6 +161,7 @@ def main(config="config/config.py", experiment_name="default", world_size=1, loc
                         epoch_num, iter_num, training_loss_logger.loss_stats['total_loss'].avg,
                         timer.compute_eta(global_step, len(dataloader_train) * cfg.trainer.max_epochs))
                     print(log_str, end='\r')
+                    writer.add_text("training_log/train", log_str, global_step)
                     writer.add_text("training_log/train", log_str, global_step)
                     training_loss_logger.log(global_step)
 
@@ -181,10 +183,19 @@ def main(config="config/config.py", experiment_name="default", world_size=1, loc
             )
 
         ## test model in main process if needed
-        if is_evaluating and evaluate_detection is not None and cfg.trainer.test_iter > 0 and (epoch_num + 1) % cfg.trainer.test_iter == 0:
-            print("\n/**** start testing after training epoch {} ******/".format(epoch_num))
-            evaluate_detection(cfg, detector.module if is_distributed else detector, dataset_val, writer, epoch_num)
-            print("/**** finish testing after training epoch {} ******/".format(epoch_num))
+        with torch.no_grad():
+            if is_evaluating and evaluate_detection is not None and cfg.trainer.test_iter > 0 and (epoch_num + 1) % cfg.trainer.test_iter == 0:
+                print("\n/**** start evaluation after training epoch {} ******/".format(epoch_num))
+                detector.eval()
+                for data in tqdm(dataloader_val):
+                    training_detection(data=data, module=detector.module if is_distributed else detector, cfg=cfg, loss_logger=eval_loss_logger)
+                log_str = 'Epoch: {} | Eval loss: {:1.5f}'.format(epoch_num, eval_loss_logger.loss_stats['total_loss'].avg)
+                print(log_str, end='\r')
+                writer.add_text("training_log/eval", log_str, global_step)
+                eval_loss_logger.log(global_step)
+
+                evaluate_detection(cfg, detector.module if is_distributed else detector, dataset_val, writer, epoch_num)
+                print("/**** finish evaluation after training epoch {} ******/".format(epoch_num))
 
         if is_distributed:
             torch.distributed.barrier() # wait untill all finish a epoch
