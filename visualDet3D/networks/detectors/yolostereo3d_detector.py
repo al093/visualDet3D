@@ -93,7 +93,7 @@ class Stereo3D(nn.Module):
 
         scores, bboxes, cls_indexes = self.bbox_head.get_bboxes(cls_preds, reg_preds, anchors, P2, left_images)
         
-        return scores, bboxes, cls_indexes
+        return scores, bboxes, cls_indexes, cls_preds
 
 
     def forward(self, inputs):
