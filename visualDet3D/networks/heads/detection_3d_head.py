@@ -135,7 +135,7 @@ class AnchorBasedDetection3DHead(nn.Module):
             return return_dict
 
         IoU = calc_iou(anchor, annotation[:, :4]) # num_anchors x num_annotations
-        np.save(f"/home/alok/3dod-debugging/3dod-pytorch-data-1/data.npy", {"iou": IoU.cpu().numpy()})
+        # np.save(f"/home/alok/3dod-debugging/3dod-pytorch-data-1/data.npy", {"iou": IoU.cpu().numpy()})
         # max for anchor
         max_overlaps, argmax_overlaps = IoU.max(dim=1) # num_anchors
 
@@ -190,9 +190,9 @@ class AnchorBasedDetection3DHead(nn.Module):
         gh = sampled_gt_bboxes[..., 3] - sampled_gt_bboxes[..., 1]
 
         targets_dx = (gx - px) / pw  # ( gt_center_X - anchor_center_X ) / anchor_width
-        targets_dy = (gy - py) / ph  # ( gt_center_Y - anchor_center_Y ) / anchor width
-        targets_dw = torch.log(gw / pw)
-        targets_dh = torch.log(gh / ph)
+        targets_dy = (gy - py) / ph  # ( gt_center_Y - anchor_center_Y ) / anchor_height
+        targets_dw = torch.log(gw / pw)  # log(gt_width / anchor_width)
+        targets_dh = torch.log(gh / ph)  # log(gt_height / anchor_height)
 
         targets_cdx = (sampled_gt_bboxes[:, 5] - px) / pw
         targets_cdy = (sampled_gt_bboxes[:, 6] - py) / ph
